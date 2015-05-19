@@ -8,7 +8,7 @@ local wibox = require("wibox")
 -- Theme handling library
 local beautiful = require("beautiful")
 -- Notification library
-local naughty = require("naughty")
+naughty = require("naughty")
 local menubar = require("menubar")
 local status, module = pcall(require, 'vicious')
 vicious = status and module or nil
@@ -334,7 +334,7 @@ globalkeys = awful.util.table.join(
 
 clientkeys = awful.util.table.join(
     awful.key({ modkey,           }, "f",      function (c) c.fullscreen = not c.fullscreen  end),
-    awful.key({ modkey, "Shift"   }, "c",      function (c) c:kill()                         end),
+    awful.key({ modkey, "Shift"   }, "c",      function (c) local pid=math.floor(c.pid) if pid then naughty.notify({bg="#FF0000",fg="#FFFFFFF",timeout=1,title="Oops...",text="Killing process with ID " .. pid}) awful.util.spawn("kill -9 " .. pid) end   end),
     awful.key({ modkey,           }, "c",      function (c) c:kill()                         end),
     awful.key({ modkey, "Control" }, "space",  awful.client.floating.toggle                     ),
     awful.key({ modkey, "Control" }, "Return", function (c) c:swap(awful.client.getmaster()) end),
