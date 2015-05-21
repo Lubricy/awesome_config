@@ -12,6 +12,7 @@ naughty = require("naughty")
 local menubar = require("menubar")
 local status, module = pcall(require, 'vicious')
 vicious = status and module or nil
+titlebars_enabled = true
 -- {{{ Error handling
 -- Check if awesome encountered an error during startup and fell back to
 -- another config (This code will only ever execute for the fallback config)
@@ -92,11 +93,7 @@ myawesomemenu = {
    { "quit", awesome.quit }
 }
 
-mynetworkmenu = {
-    {"browser", browser}
-}
-
-mymainmenu = awful.menu({ items = { {"network", mynetworkmenu },
+mymainmenu = awful.menu({ items = {
                                     { "awesome", myawesomemenu, beautiful.awesome_icon },
                                     { "open terminal", terminal }
                                   }
@@ -266,7 +263,21 @@ root.buttons(awful.util.table.join(
     awful.button({ }, 5, awful.tag.viewprev)
 ))
 -- }}}
-
+function repainttitle()
+        if titlebars_enabled then 
+            for _,c in pairs(client.get()) do
+                if c.type=='dialog' or awful.client.floating.get(c) or c==client.focus or awful.client.getmaster()==c then
+                    awful.titlebar.show(c)
+                else
+                    awful.titlebar.hide(c)
+               end
+            end
+        else
+            for _,c in pairs(client.get()) do
+                awful.titlebar.hide(c) 
+            end
+        end
+    end
 -- {{{ Key bindings
 globalkeys = awful.util.table.join(
     awful.key({ modkey,           }, "Left",  function() awful.client.focus.bydirection("left");  if client.focus then client.focus:raise() end end),
@@ -290,13 +301,23 @@ globalkeys = awful.util.table.join(
     -- Layout manipulation
     awful.key({ modkey, "Shift"   }, "j", function () awful.client.swap.byidx(  1)    end),
     awful.key({ modkey, "Shift"   }, "k", function () awful.client.swap.byidx( -1)    end),
-    awful.key({ modkey,           }, "t", function () awful.client.swap.bydirection("left")    end),
     awful.key({ modkey, "Control" }, "j", function () awful.screen.focus_relative( 1) end),
     awful.key({ modkey, "Control" }, "k", function () awful.screen.focus_relative(-1) end),
     awful.key({ modkey,           }, "u", awful.client.urgent.jumpto),
+    awful.key({ modkey,           }, "t", function ()
+        titlebars_enabled = not titlebars_enabled
+        repainttitle()
+    end),
     awful.key({ modkey,           }, "Tab",
         function ()
-            awful.client.focus.history.previous()
+            client.focus = awful.client.next(1)
+            if client.focus then
+                client.focus:raise()
+            end
+        end),
+    awful.key({ modkey, "Shift"   }, "Tab",
+        function ()
+            client.focus = awful.client.next(-1)
             if client.focus then
                 client.focus:raise()
             end
@@ -321,7 +342,7 @@ globalkeys = awful.util.table.join(
     -- Prompt
     awful.key({ modkey },            "r",     function () mypromptbox[mouse.screen]:run() end),
 
-    awful.key({ modkey }, "x",
+    awful.key({ modkey, "Shift"   }, "r",
               function ()
                   awful.prompt.run({ prompt = "Run Lua code: " },
                   mypromptbox[mouse.screen].widget,
@@ -331,15 +352,28 @@ globalkeys = awful.util.table.join(
     -- Menubar
     awful.key({ modkey }, "p", function() menubar.show() end)
 )
-
+lastclient = lastclient or nil
 clientkeys = awful.util.table.join(
     awful.key({ modkey,           }, "f",      function (c) c.fullscreen = not c.fullscreen  end),
-    awful.key({ modkey, "Shift"   }, "c",      function (c) local pid=math.floor(c.pid) if pid then naughty.notify({bg="#FF0000",fg="#FFFFFFF",timeout=1,title="Oops...",text="Killing process with ID " .. pid}) awful.util.spawn("kill -9 " .. pid) end   end),
-    awful.key({ modkey,           }, "c",      function (c) c:kill()                         end),
+    awful.key({ modkey,           }, "c",      function (c) local pid=math.floor(c.pid) if pid then naughty.notify({bg="#FF0000",fg="#FFFFFFF",timeout=1,title="Oops...",text="Killing process with ID " .. pid}) awful.util.spawn("kill -9 " .. pid) end   end),
+    awful.key({ modkey,           }, "x",      function (c) c:kill()                         end),
     awful.key({ modkey, "Control" }, "space",  awful.client.floating.toggle                     ),
     awful.key({ modkey, "Control" }, "Return", function (c) c:swap(awful.client.getmaster()) end),
+    awful.key({ modkey,           }, "e", function (c) 
+        if (c == awful.client.getmaster()) then
+            if not lastclient then 
+                lastclient = awful.client.next(1)
+            end
+            client.focus = lastclient
+            c:swap(lastclient)
+            lastclient = c
+        else 
+            lastclient = awful.client.getmaster() 
+            c:swap(lastclient)
+        end 
+    end),
     awful.key({ modkey,           }, "o",      awful.client.movetoscreen                        ),
-    awful.key({ modkey,           }, "t",      function (c) c.ontop = not c.ontop            end),
+    -- awful.key({ modkey,           }, "t",      function (c) c.ontop = not c.ontop            end),
     awful.key({ modkey,           }, "n",
         function (c)
             -- The client currently has the input focus, so it cannot be
@@ -420,7 +454,12 @@ awful.rules.rules = {
                      buttons = clientbuttons } },
     { rule = { class = "MPlayer" },
       properties = { floating = true } },
-    { rule = { class = "Hangouts" },
+    { rule = { role = "pop-up" },
+      properties = { floating = true },
+      callback = function ()
+      end
+    },
+    { rule = { role = "bubble" },
       properties = { floating = true } },
     { rule = { class = "pinentry" },
       properties = { floating = true } },
@@ -455,8 +494,8 @@ client.connect_signal("manage", function (c, startup)
         end
     end
 
-    local titlebars_enabled = true
-    if titlebars_enabled and (c.type == "normal" or c.type == "dialog") then
+    --if titlebars_enabled and (c.type == "dialog" or c.floating==true) then
+    if (c.type == "normal" or c.type == "dialog") then
         -- buttons for the titlebar
         local buttons = awful.util.table.join(
                 awful.button({ }, 1, function()
@@ -501,6 +540,15 @@ client.connect_signal("manage", function (c, startup)
     end
 end)
 awful.tag.incmwfact( 0.20)    
-client.connect_signal("focus", function(c) c.border_color = beautiful.border_focus end)
-client.connect_signal("unfocus", function(c) c.border_color = beautiful.border_normal end)
+client.connect_signal("focus", function(c) 
+    c.border_color = beautiful.border_focus
+    repainttitle()
+end)
+client.connect_signal("unfocus", function(c) 
+    c.border_color = beautiful.border_normal
+    --repainttitle()
+end)
+client.connect_signal("list",function ()
+    repainttitle()
+end)
 -- }}}
