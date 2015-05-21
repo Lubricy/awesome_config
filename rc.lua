@@ -454,13 +454,25 @@ awful.rules.rules = {
                      buttons = clientbuttons } },
     { rule = { class = "MPlayer" },
       properties = { floating = true } },
-    { rule = { role = "pop-up" },
+    { rule = { type = "notification" },
+      properties = { floating = false },
+      callback = function (c)
+        awful.placement.centered(c,nil)
+        naughty.notify({text="hahaha"})
+      end
+    },
+    { rule = { role = "popup" },
       properties = { floating = true },
-      callback = function ()
+      callback = function (c)
+        awful.placement.centered(c,nil)
+        naughty.notify({text="hahaha"})
       end
     },
     { rule = { role = "bubble" },
-      properties = { floating = true } },
+      properties = { floating = true }, 
+      callback = function (c)
+      end
+    },
     { rule = { class = "pinentry" },
       properties = { floating = true } },
     { rule = { class = "gimp" },
