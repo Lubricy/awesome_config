@@ -43,7 +43,7 @@ end
 beautiful.init("~/.config/awesome/theme.lua")
 
 -- This is used later as the default terminal and editor to run.
-terminal = "xterm"
+terminal = "urxvtc"
 editor = os.getenv("EDITOR") or "nano"
 editor_cmd = terminal .. " -e " .. editor
 browser = os.getenv("BROWSER") or "google-chrome-stable"
@@ -328,7 +328,9 @@ globalkeys = awful.util.table.join(
     awful.key({ modkey, "Control" }, "r", awesome.restart),
     awful.key({ modkey, "Shift"   }, "q", awesome.quit),
 
-    awful.key({ modkey,           }, ".",     function () awful.tag.incmwfact( 0.05)    end),
+    awful.key({ modkey, "Control" }, ".",     function () awful.tag.incmwfact( 0.01)    end),
+    awful.key({ modkey, "Control" }, ".",     function () awful.tag.incmwfact( 0.01)    end),
+    awful.key({ modkey,           }, ",",     function () awful.tag.incmwfact(-0.05)    end),
     awful.key({ modkey,           }, ",",     function () awful.tag.incmwfact(-0.05)    end),
     awful.key({ modkey, "Shift"   }, "h",     function () awful.tag.incnmaster( 1)      end),
     awful.key({ modkey, "Shift"   }, "l",     function () awful.tag.incnmaster(-1)      end),
@@ -360,18 +362,30 @@ clientkeys = awful.util.table.join(
     awful.key({ modkey, "Control" }, "space",  awful.client.floating.toggle                     ),
     awful.key({ modkey, "Control" }, "Return", function (c) c:swap(awful.client.getmaster()) end),
     awful.key({ modkey,           }, "e", function (c) 
-        if (c == awful.client.getmaster()) then
-            if not lastclient then 
+        if not awful.client.floating.get(c) then 
+            if (c == awful.client.getmaster()) then
+                if not pcall(function () client.focus = lastclient end)then 
                 lastclient = awful.client.next(1)
+                client.focus = lastclient
             end
-            client.focus = lastclient
+
             c:swap(lastclient)
             lastclient = c
         else 
             lastclient = awful.client.getmaster() 
             c:swap(lastclient)
         end 
+    end
+
     end),
+    awful.key({ modkey }, "Next",  function (c) awful.client.moveresize( 20,  20, -40, -40) end),
+    awful.key({ modkey }, "Prior", function (c) awful.client.moveresize(-20, -20,  40,  40) end),
+    awful.key({ modkey ,"Control" }, "Next",  function (c) awful.client.moveresize( 0,  20,  0,  -40) end),
+    awful.key({ modkey ,"Control" }, "Prior", function (c) awful.client.moveresize( 0, -20,  0,   40) end),
+    awful.key({ modkey ,"Control" }, "Down",  function () awful.client.moveresize(  0,  20,   0,   0) end),
+    awful.key({ modkey ,"Control" }, "Up",    function () awful.client.moveresize(  0, -20,   0,   0) end),
+    awful.key({ modkey ,"Control" }, "Left",  function () awful.client.moveresize(-20,   0,   0,   0) end),
+    awful.key({ modkey ,"Control" }, "Right", function () awful.client.moveresize( 20,   0,   0,   0) end),
     awful.key({ modkey,           }, "o",      awful.client.movetoscreen                        ),
     -- awful.key({ modkey,           }, "t",      function (c) c.ontop = not c.ontop            end),
     awful.key({ modkey,           }, "n",
@@ -451,9 +465,13 @@ awful.rules.rules = {
                      focus = awful.client.focus.filter,
                      raise = true,
                      keys = clientkeys,
-                     buttons = clientbuttons } },
-    { rule = { class = "MPlayer" },
-      properties = { floating = true } },
+                     buttons = clientbuttons },
+                     callback = function(c)
+                         if awful.client.floating.get(c) then
+                            awful.client.setslave(c)
+                        end
+                    end
+                },
     { rule = { type = "notification" },
       properties = { floating = false },
       callback = function (c)
@@ -461,11 +479,20 @@ awful.rules.rules = {
         naughty.notify({text="hahaha"})
       end
     },
+    { rule = { role = "gimp-dock" },
+      properties = { floating = true ,ontop = true,tag = tags[1][2]},
+      callback = function (c)
+      end
+    },
+    { rule = { role = "gimp-toolbox" },
+      properties = { floating = true ,ontop = true,tag = tags[1][2]},
+      callback = function (c)
+      end
+    },
     { rule = { role = "popup" },
       properties = { floating = true },
       callback = function (c)
         awful.placement.centered(c,nil)
-        naughty.notify({text="hahaha"})
       end
     },
     { rule = { role = "bubble" },
@@ -475,8 +502,8 @@ awful.rules.rules = {
     },
     { rule = { class = "pinentry" },
       properties = { floating = true } },
-    { rule = { class = "gimp" },
-      properties = { floating = true } },
+    { rule = { class = "Gimp" },
+      properties = { tag = tags[1][2]} },
     -- Set Firefox to always map on tags number 2 of screen 1.
     -- { rule = { class = "Firefox" },
     --   properties = { tag = tags[1][2] } },
@@ -507,7 +534,7 @@ client.connect_signal("manage", function (c, startup)
     end
 
     --if titlebars_enabled and (c.type == "dialog" or c.floating==true) then
-    if (c.type == "normal" or c.type == "dialog") then
+    if true then --(c.type == "normal" or c.type == "dialog") then
         -- buttons for the titlebar
         local buttons = awful.util.table.join(
                 awful.button({ }, 1, function()
@@ -552,6 +579,11 @@ client.connect_signal("manage", function (c, startup)
     end
 end)
 awful.tag.incmwfact( 0.20)    
+client.connect_signal("property::floating", function(c)
+    if awful.client.getmaster()==c and  awful.client.floating.get(c) then
+        awful.client.setslave(c)
+    end
+end)
 client.connect_signal("focus", function(c) 
     c.border_color = beautiful.border_focus
     repainttitle()
