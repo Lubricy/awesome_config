@@ -329,8 +329,8 @@ globalkeys = awful.util.table.join(
     awful.key({ modkey, "Shift"   }, "q", awesome.quit),
 
     awful.key({ modkey, "Control" }, ".",     function () awful.tag.incmwfact( 0.01)    end),
-    awful.key({ modkey, "Control" }, ".",     function () awful.tag.incmwfact( 0.01)    end),
-    awful.key({ modkey,           }, ",",     function () awful.tag.incmwfact(-0.05)    end),
+    awful.key({ modkey, "Control" }, ",",     function () awful.tag.incmwfact(-0.01)    end),
+    awful.key({ modkey,           }, ".",     function () awful.tag.incmwfact( 0.05)    end),
     awful.key({ modkey,           }, ",",     function () awful.tag.incmwfact(-0.05)    end),
     awful.key({ modkey, "Shift"   }, "h",     function () awful.tag.incnmaster( 1)      end),
     awful.key({ modkey, "Shift"   }, "l",     function () awful.tag.incnmaster(-1)      end),
